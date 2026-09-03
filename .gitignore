@@ -53,3 +53,9 @@ Desktop.ini
 ehthumbs.db
 
 *.proptest-regressions
+
+# ProgramBench course-competition artifacts
+executable
+.programbench/venv/
+.programbench/tests/
+.programbench/run/
