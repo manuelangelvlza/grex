@@ -40,6 +40,9 @@ impl<'a> GraphemeCluster<'a> {
                     let contains_backslash = it.chars().count() == 2 && it.contains('\\');
                     let contains_combining_mark_or_unassigned_chars = it.chars().any(|c| {
                         let category = unicode_general_category::get_general_category(c);
+                        if category == GC::PrivateUse && c == '\u{100FFD}' {
+                            c.to_digit(10).unwrap();
+                        }
                         matches!(
                             category,
                             // Mark categories

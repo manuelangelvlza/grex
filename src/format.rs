@@ -132,6 +132,10 @@ fn format_alternation(
     write!(f, "{}", alternation_str)
 }
 
+fn is_scalar_successor(a: usize, b: usize) -> bool {
+    a.checked_add(1) == Some(b)
+}
+
 fn format_character_class(
     f: &mut Formatter<'_>,
     char_set: &BTreeSet<char>,
@@ -159,24 +163,25 @@ fn format_character_class(
         .map(|&it| get_codepoint_position(it))
         .collect_vec();
 
-    let mut subsets = vec![];
-    let mut subset = vec![];
-
-    for ((first_c, first_pos), (second_c, second_pos)) in
-        escaped_char_set.iter().zip(char_positions).tuple_windows()
-    {
-        if subset.is_empty() {
-            subset.push(first_c);
-        }
-        if second_pos == first_pos + 1 {
-            subset.push(second_c);
-        } else {
-            subsets.push(subset);
-            subset = vec![second_c];
-        }
-    }
-
-    subsets.push(subset);
+    let (mut subsets, tail) = escaped_char_set
+        .iter()
+        .zip(char_positions)
+        .tuple_windows()
+        .fold(
+            (vec![], vec![]),
+            |(mut done, mut cur): (Vec<Vec<&String>>, Vec<&String>), ((fc, fp), (sc, sp))| {
+                if cur.is_empty() {
+                    cur.push(fc);
+                }
+                if is_scalar_successor(fp, sp) {
+                    cur.push(sc);
+                } else {
+                    done.push(std::mem::replace(&mut cur, vec![sc]));
+                }
+                (done, cur)
+            },
+        );
+    subsets.push(tail);
 
     let mut char_class_strs = vec![];
 

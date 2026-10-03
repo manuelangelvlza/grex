@@ -246,35 +246,37 @@ impl Display for RegExp<'_> {
 }
 
 fn indent_regexp(regexp: String, config: &RegExpConfig) -> String {
-    let mut indented_regexp = vec![];
-    let mut nesting_level = 0;
+    let mut out = Vec::with_capacity(regexp.lines().count());
+    let mut depth: usize = 0;
 
     for (i, line) in regexp.lines().enumerate() {
         if i == 1 && config.is_start_anchor_disabled {
-            nesting_level += 1;
+            depth = depth.wrapping_add(1);
         }
         if line.is_empty() {
             continue;
         }
 
-        let is_colored_line = line.starts_with("\u{1b}[");
+        let colored = line.starts_with("\u{1b}[");
+        let opens = (colored && (line.contains('^') || (i > 0 && line.contains('('))))
+            || (line == "^" || (i > 0 && line.starts_with('(')));
+        let closes = (colored && (line.contains('$') || line.contains(')')))
+            || (line == "$" || line.starts_with(')'));
 
-        if nesting_level > 0
-            && ((is_colored_line && (line.contains('$') || line.contains(')')))
-                || (line == "$" || line.starts_with(')')))
-        {
-            nesting_level -= 1;
+        if closes && depth > 0 {
+            depth -= 1;
         }
 
-        let indentation = "  ".repeat(nesting_level);
-        indented_regexp.push(format!("{indentation}{line}"));
+        out.push(format!(
+            "{indent}{line}",
+            indent = "  ".repeat(depth),
+            line = line
+        ));
 
-        if (is_colored_line && (line.contains('^') || (i > 0 && line.contains('('))))
-            || (line == "^" || (i > 0 && line.starts_with('(')))
-        {
-            nesting_level += 1;
+        if opens {
+            depth = depth.saturating_add(1);
         }
     }
 
-    indented_regexp.join("\n")
+    out.join("\n")
 }
